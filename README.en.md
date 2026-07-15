@@ -61,7 +61,7 @@ When I started, **the app did not work.**
 |---|---|---|
 | Backend build | **Impossible** (failed in 28s) | Succeeds |
 | Japanese OCR | **Never worked** | Works |
-| `git clone` | 608MB | **1.0MB** |
+| `git clone` | 608MB | **1.5MB** |
 | Tracked files | 45,438 | **32** |
 | Tests | `npm test` failed; backend had none | 7 pytest / 5 Vitest |
 
@@ -180,7 +180,7 @@ I verified they work as regression tests: removing `onChange` from `Editable` fa
 
 `git-filter-repo` exists to preserve a real history while excising paths from it. Here the history was one commit called "initial commit" with nothing worth preserving, so `rm -rf .git && git init` was the honest tool. I committed the original code first, then stacked the modernisation on top — matching the actual order of the work, so the commit log reads as a record of it.
 
-Result: `.git` 88MB → **~1MB**; `git clone` 608MB → **1.0MB**.
+Result: `.git` 88MB → **~1.5MB**; `git clone` 608MB → **1.5MB**.
 
 ## Development
 
