@@ -1,19 +1,23 @@
-FROM centos/python-36-centos7:latest
-USER root
+FROM python:3.12-slim
 
-RUN yum update -y
-RUN yum install -y epel-release
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# TesseractOCR に必要なパッケージをインストール
-RUN yum install -y tesseract tesseract-langpack-jpn.noarch leptonica
+# Tesseract with the Japanese language packs (jpn-vert covers vertical writing).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tesseract-ocr \
+      tesseract-ocr-eng \
+      tesseract-ocr-jpn \
+      tesseract-ocr-jpn-vert \
+ && rm -rf /var/lib/apt/lists/*
 
-# OpenCV に必要なパッケージをインストール
-RUN yum install -y opencv opencv-devel opencv-python
+WORKDIR /code
 
-ENV PYTHONUNBUFFERED 1
-RUN mkdir /app
-WORKDIR /app
-ADD requirements.txt /app/
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-# ADD . /app/
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+
+EXPOSE 9004
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9004", "--reload"]
