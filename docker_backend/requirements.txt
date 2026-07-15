@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+psycopg2>=2.7,<3.0
+pyocr==0.6
+opencv-contrib-python==4.5.3.56
+python-multipart
