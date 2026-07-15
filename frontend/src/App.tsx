@@ -22,6 +22,18 @@ import { requestOcr, toErrorMessage } from './api/ocr';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+// Mirrors ALLOWED_CONTENT_TYPES in backend/app/config.py. Kept narrow rather
+// than `image/*` so an unsupported format (e.g. HEIC) is rejected in the
+// browser instead of making a round trip to be told 415.
+const ACCEPTED_IMAGE_TYPES = {
+  'image/jpeg': [],
+  'image/png': [],
+  'image/gif': [],
+  'image/bmp': [],
+  'image/tiff': [],
+  'image/webp': [],
+} as const;
+
 const baseStyle = {
   height: '80%',
   transition: '0.2s ease-in-out',
@@ -54,7 +66,7 @@ function App() {
   const { getRootProps, getInputProps, isDragActive, open, fileRejections } = useDropzone({
     onDrop,
     noClick: true,
-    accept: { 'image/*': [] },
+    accept: ACCEPTED_IMAGE_TYPES,
     maxSize: MAX_FILE_SIZE,
     maxFiles: 1,
   });

@@ -75,8 +75,14 @@ async def convert(file: UploadFile = File(...)) -> dict[str, str]:
 
     try:
         image = Image.open(io.BytesIO(contents))
+        # Decode eagerly: a valid header with a truncated body only fails here.
         image.load()
-    except UnidentifiedImageError:
+    except Image.DecompressionBombError:
+        raise HTTPException(status_code=413, detail="画像の解像度が大きすぎます。")
+    except (UnidentifiedImageError, OSError) as exc:
+        # UnidentifiedImageError subclasses OSError; a truncated image raises
+        # a bare OSError. Both mean "not a usable image", not a server fault.
+        logger.info("Rejected undecodable upload: %s", exc)
         raise HTTPException(status_code=415, detail="画像として読み取れませんでした。")
 
     try:

@@ -55,6 +55,14 @@ def test_convert_rejects_non_image(client: TestClient) -> None:
     assert response.status_code == 415
 
 
+def test_convert_rejects_truncated_image(client: TestClient) -> None:
+    """A valid header with a chopped body passes Image.open() and only fails at
+    load(), raising a bare OSError -- which used to escape as a 500."""
+    truncated = _png_bytes("HELLO")[:300]
+    response = client.post("/convert/", files={"file": ("broken.png", truncated, "image/png")})
+    assert response.status_code == 415
+
+
 def test_convert_rejects_oversized_upload(client: TestClient) -> None:
     oversized = b"\x89PNG\r\n\x1a\n" + b"0" * (config.MAX_UPLOAD_BYTES + 1)
     response = client.post("/convert/", files={"file": ("big.png", oversized, "image/png")})

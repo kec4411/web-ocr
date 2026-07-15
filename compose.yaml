@@ -27,7 +27,8 @@ services:
       - ./backend:/code
     environment:
       - OCR_LANG=jpn+eng
-      - CORS_ALLOW_ORIGINS=http://localhost:5173
+      # 5173 = Vite dev server, 8080 = the nginx prod profile.
+      - CORS_ALLOW_ORIGINS=http://localhost:5173,http://localhost:8080
     ports:
       - "9004:9004"
     healthcheck:

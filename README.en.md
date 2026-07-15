@@ -15,6 +15,8 @@ cd web-ocr && docker compose up
 
 Open <http://localhost:5173>. Docker is the only prerequisite — no Node.js, Python, or Tesseract needed on the host.
 
+A test image is included at [`docs/sample.jpg`](docs/sample.jpg).
+
 ## Stack
 
 | | |
@@ -23,7 +25,7 @@ Open <http://localhost:5173>. Docker is the only prerequisite — no Node.js, Py
 | Backend | Python 3.12 / FastAPI / pytesseract |
 | OCR engine | Tesseract 5.5 (LSTM) with Japanese traineddata (incl. vertical) |
 | Runtime | Docker Compose |
-| Tests | pytest (6) / Vitest + Testing Library (5) |
+| Tests | pytest (7) / Vitest + Testing Library (5) |
 
 ## Architecture
 
@@ -60,8 +62,8 @@ When I started, **the app did not work.**
 | Backend build | **Impossible** (failed in 28s) | Succeeds |
 | Japanese OCR | **Never worked** | Works |
 | `git clone` | 608MB | **1.0MB** |
-| Tracked files | 45,438 | **29** |
-| `npm test` | Failed | 11 passing |
+| Tracked files | 45,438 | **32** |
+| Tests | `npm test` failed; backend had none | 7 pytest / 5 Vitest |
 
 ## Design decisions
 
@@ -95,7 +97,7 @@ So I measured before optimising — and rewrote the justification for every chan
 - PIL reads JPEG natively — and was already imported
 - pytesseract serialises the PIL image to its own temp file before shelling out to `tesseract` anyway
 
-So it did double work to produce a format change with no effect on OCR output. Deleting it removed ~220MB (image 667MB → 447MB) and, more importantly, made **six bugs cease to exist rather than get fixed**:
+So it did double work to produce a format change with no effect on OCR output. Deleting it removed ~220MB (image 667MB → 447MB) and, more importantly, made **these bugs cease to exist rather than get fixed**:
 
 - A TOCTOU race returning a path to a just-deleted file (`create_temppath`)
 - A temp-file leak from a `try/finally` with no `except`
@@ -168,7 +170,7 @@ The migration wasn't cosmetic. With `strict` plus **`noUncheckedIndexedAccess`**
 
 ### 9. Every test exists because its bug actually shipped
 
-No coverage chase — 11 tests, each guarding a real defect. The best value-per-line is `test_japanese_langpack_installed`, which just asserts `{'jpn','eng'} <= set(pytesseract.get_languages())` and directly guards the language bug above.
+No coverage chase — 12 tests, each guarding a real defect. The best value-per-line is `test_japanese_langpack_installed`, which just asserts `{'jpn','eng'} <= set(pytesseract.get_languages())` and directly guards the language bug above.
 
 I verified they work as regression tests: removing `onChange` from `Editable` fails `lets the user edit the OCR result` and **only** that test.
 
@@ -178,7 +180,7 @@ I verified they work as regression tests: removing `onChange` from `Editable` fa
 
 `git-filter-repo` exists to preserve a real history while excising paths from it. Here the history was one commit called "initial commit" with nothing worth preserving, so `rm -rf .git && git init` was the honest tool. I committed the original code first, then stacked the modernisation on top — matching the actual order of the work, so the commit log reads as a record of it.
 
-Result: `.git` 88MB → **720KB**; `git clone` 608MB → **1.0MB**.
+Result: `.git` 88MB → **~1MB**; `git clone` 608MB → **1.0MB**.
 
 ## Development
 
@@ -209,7 +211,7 @@ docker compose --profile prod up frontend-prod
 | `OCR_LANG` | `jpn+eng` | Tesseract languages. Japanese documents routinely embed Latin text, hence the pair |
 | `OCR_PSM` | `3` | Page segmentation mode. 3 = automatic (Tesseract's own default) |
 | `MAX_UPLOAD_BYTES` | `10485760` | Upload cap (10MB) |
-| `CORS_ALLOW_ORIGINS` | `http://localhost:5173` | Allowed origins, comma-separated |
+| `CORS_ALLOW_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Allowed origins, comma-separated. 5173 = Vite, 8080 = nginx (prod) |
 | `VITE_API_BASE_URL` | `http://localhost:9004` | Where the frontend looks for the API |
 
 > **Note:** Vite inlines `VITE_*` at **build** time. Compose's `environment:` works for the dev server, but the **production image needs it as a build arg** (see `ARG VITE_API_BASE_URL` in `frontend/Dockerfile`) — a runtime env var never reaches the bundle.

@@ -8,6 +8,9 @@ build/
 # Vite
 .vite/
 
+# TypeScript incremental build state
+*.tsbuildinfo
+
 # Python
 __pycache__/
 *.py[cod]
