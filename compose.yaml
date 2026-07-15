@@ -22,7 +22,9 @@ services:
   backend:
     build: ./backend
     volumes:
-      - ./backend/app:/code/app
+      # Whole dir, not just app/: brings tests/ and requirements-dev.txt into
+      # the running container without shipping them in the image.
+      - ./backend:/code
     environment:
       - OCR_LANG=jpn+eng
       - CORS_ALLOW_ORIGINS=http://localhost:5173
