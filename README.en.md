@@ -15,7 +15,7 @@ cd web-ocr && docker compose up
 
 Open <http://localhost:5173>. Docker is the only prerequisite — no Node.js, Python, or Tesseract needed on the host.
 
-A test image is included at [`docs/sample.jpg`](docs/sample.jpg).
+Sample images are included in [`docs/samples/`](docs/samples) — a business card and a receipt, both fictional.
 
 ## Stack
 

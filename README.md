@@ -15,7 +15,7 @@ cd web-ocr && docker compose up
 
 ブラウザで <http://localhost:5173> を開いてください。必要なものは Docker だけです。Node.js も Python も Tesseract もホストには不要です。
 
-動作確認用の画像として [`docs/sample.jpg`](docs/sample.jpg) を同梱しています。
+動作確認用のサンプル画像を [`docs/samples/`](docs/samples) に同梱しています（名刺・レシート、いずれも架空データ）。
 
 ## 技術スタック
 
