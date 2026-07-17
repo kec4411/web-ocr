@@ -4,7 +4,7 @@
 
 A web app that extracts Japanese text from images: drop an image in, get editable text back.
 
-![Web OCR screenshot](docs/screenshot.png)
+![Web OCR demo](docs/demo.gif)
 
 ## Quick start
 
