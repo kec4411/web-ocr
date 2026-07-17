@@ -48,7 +48,7 @@ flowchart LR
 - Drag-and-drop or file-picker upload
 - Mixed Japanese/English recognition (`jpn+eng`)
 - Image preview before upload
-- Edit the OCR result in place
+- Edit the OCR result in place; the field grows to fit the number of lines
 - Type and size validation (images only, 10MB cap) with real error messages
 
 ## About this repository

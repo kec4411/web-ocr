@@ -15,12 +15,16 @@ import {
   theme,
   useToast,
 } from '@chakra-ui/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 import { requestOcr, toErrorMessage } from './api/ocr';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Minimum height of the preview / result panels. Short results still read as a
+// card; the result panel grows past this as the text gets longer.
+const PANEL_MIN_H = '340px';
 
 // Mirrors ALLOWED_CONTENT_TYPES in backend/app/config.py. Kept narrow rather
 // than `image/*` so an unsupported format (e.g. HEIC) is rejected in the
@@ -35,9 +39,9 @@ const ACCEPTED_IMAGE_TYPES = {
 } as const;
 
 const baseStyle = {
-  height: '80%',
   transition: '0.2s ease-in-out',
   borderRadius: '10px',
+  padding: '44px 24px',
 } as const;
 
 const borderNormalStyle = { border: '3px dotted var(--chakra-colors-gray-300)' } as const;
@@ -49,6 +53,16 @@ function App() {
   const [ocrText, setOcrText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Grow the edit-mode textarea to fit its content. The view-mode preview
+  // (EditablePreview) is a block element and grows on its own.
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const dropped = acceptedFiles[0];
@@ -112,30 +126,28 @@ function App() {
       <Heading bg="green.700" color="white" p="2">
         WEB OCR
       </Heading>
-      <Grid h="600px" templateRows="repeat(3, 1fr)" templateColumns="repeat(7, 1fr)" gap={4}>
-        <GridItem rowSpan={1} colSpan={7}>
-          <Center h="100%">
-            <Box {...getRootProps({ style })}>
-              <Center h="100%">
-                <input {...getInputProps()} />
-                <Text>
-                  ここにファイルをドラッグ＆ドロップするか、
-                  <Link color="teal.500" onClick={open}>
-                    ファイルを選択
-                  </Link>
-                  してください。
-                </Text>
-              </Center>
-            </Box>
-          </Center>
-        </GridItem>
 
-        <GridItem rowSpan={2} colSpan={3}>
-          <Heading fontSize="md">・画像プレビュー</Heading>
-          <Center h="100%">
+      <Box p={4}>
+        <Center mb={6}>
+          <Box {...getRootProps({ style })} w="80%" maxW="640px">
+            <input {...getInputProps()} />
+            <Text textAlign="center">
+              ここにファイルをドラッグ＆ドロップするか、
+              <Link color="teal.500" onClick={open}>
+                ファイルを選択
+              </Link>
+              してください。
+            </Text>
+          </Box>
+        </Center>
+
+        <Grid templateColumns="repeat(7, 1fr)" gap={4} alignItems="start">
+          <GridItem colSpan={3}>
+            <Heading fontSize="md" mb={2}>
+              ・画像プレビュー
+            </Heading>
             <Box
-              w="95%"
-              h="95%"
+              h={PANEL_MIN_H}
               bg="white"
               border="1px"
               borderColor="gray.200"
@@ -154,50 +166,66 @@ function App() {
                 )}
               </Center>
             </Box>
-          </Center>
-        </GridItem>
+          </GridItem>
 
-        <GridItem rowSpan={2} colSpan={1}>
-          <Center h="100%">
-            <Button
-              type="button"
-              colorScheme="green"
-              onClick={postImage}
-              isLoading={isLoading}
-              loadingText="読み取り中"
-              isDisabled={!file}
-              spinnerPlacement="start"
+          <GridItem colSpan={1}>
+            {/* Hidden heading reserves the same height as the real ones, so the
+                button band lines up with the panels below their headings. */}
+            <Heading fontSize="md" mb={2} aria-hidden="true" visibility="hidden">
+              ・
+            </Heading>
+            <Center h={PANEL_MIN_H}>
+              <Button
+                type="button"
+                colorScheme="green"
+                onClick={postImage}
+                isLoading={isLoading}
+                loadingText="読み取り中"
+                isDisabled={!file}
+                spinnerPlacement="start"
+                boxShadow="xl"
+              >
+                読み取り開始
+              </Button>
+            </Center>
+          </GridItem>
+
+          <GridItem colSpan={3}>
+            <Heading fontSize="md" mb={2}>
+              ・読み取り結果
+            </Heading>
+            <Box
+              minH={PANEL_MIN_H}
+              bg="white"
+              border="1px"
+              borderColor="gray.200"
+              borderRadius="10"
               boxShadow="xl"
+              p={2}
             >
-              読み取り開始
-            </Button>
-          </Center>
-        </GridItem>
-
-        <GridItem rowSpan={2} colSpan={3}>
-          <Heading fontSize="md">・読み取り結果</Heading>
-          <Box
-            w="95%"
-            h="95%"
-            bg="white"
-            border="1px"
-            borderColor="gray.200"
-            borderRadius="10"
-            boxShadow="xl"
-          >
-            <Editable
-              value={ocrText}
-              onChange={setOcrText}
-              placeholder="ここに読み取り結果が表示されます。"
-              h="100%"
-              whiteSpace="pre-wrap"
-            >
-              <EditablePreview h="100%" />
-              <EditableTextarea h="100%" aria-label="読み取り結果" />
-            </Editable>
-          </Box>
-        </GridItem>
-      </Grid>
+              <Editable
+                value={ocrText}
+                onChange={(value) => {
+                  setOcrText(value);
+                  requestAnimationFrame(autoResize);
+                }}
+                onEdit={() => requestAnimationFrame(autoResize)}
+                placeholder="ここに読み取り結果が表示されます。"
+                whiteSpace="pre-wrap"
+                w="100%"
+              >
+                <EditablePreview w="100%" />
+                <EditableTextarea
+                  ref={textareaRef}
+                  aria-label="読み取り結果"
+                  resize="none"
+                  overflow="hidden"
+                />
+              </Editable>
+            </Box>
+          </GridItem>
+        </Grid>
+      </Box>
     </ChakraProvider>
   );
 }
