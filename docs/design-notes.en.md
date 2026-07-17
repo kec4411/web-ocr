@@ -1,4 +1,8 @@
-# Design decisions
+# Design & development notes
+
+Technical details for Web OCR ([日本語](../README.md) / [English](../README.en.md)), supplementing the README.
+
+## Design decisions
 
 A record of the technical choices I actually had to reason about while building [Web OCR](../README.en.md), and why.
 
@@ -41,7 +45,7 @@ So it did double work to produce a format change with no effect on OCR output. D
 
 ### 3. pyocr → pytesseract (not a popularity contest)
 
-Japanese OCR had never worked. Here's why:
+Japanese OCR was not working (at least in the current environment). Here's why:
 
 ```python
 langs = tool.get_available_languages()  # ['eng', 'jpn', 'jpn_vert', 'osd']
@@ -114,3 +118,58 @@ I verified they work as regression tests: removing `onChange` from `Editable` fa
 `git-filter-repo` exists to preserve a real history while excising paths from it. Here the history was one commit called "initial commit" with nothing worth preserving, so `rm -rf .git && git init` was the honest tool. I committed the original code first, then stacked the modernisation on top — matching the actual order of the work, so the commit log reads as a record of it.
 
 Result: `.git` 88MB → **~1.5MB**; `git clone` 608MB → **1.5MB**.
+
+## Development
+
+```bash
+# Start
+#   First build: ≈27s (with base images already pulled; add pull time if not)
+#   Afterwards:  ≈7s
+docker compose up
+
+# Backend tests
+docker compose exec backend pip install -r requirements-dev.txt
+docker compose exec backend python -m pytest
+
+# Frontend tests and typecheck
+cd frontend
+npm install
+npm test
+npm run typecheck
+
+# Production build (nginx, http://localhost:8080)
+docker compose --profile prod up frontend-prod
+```
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OCR_LANG` | `jpn+eng` | Tesseract languages. Japanese documents routinely embed Latin text, hence the pair |
+| `OCR_PSM` | `3` | Page segmentation mode. 3 = automatic (Tesseract's own default) |
+| `MAX_UPLOAD_BYTES` | `10485760` | Upload cap (10MB) |
+| `CORS_ALLOW_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Allowed origins, comma-separated. 5173 = Vite, 8080 = nginx (prod) |
+| `VITE_API_BASE_URL` | `http://localhost:9004` | Where the frontend looks for the API |
+
+> **Note:** Vite inlines `VITE_*` at **build** time. Compose's `environment:` works for the dev server, but the **production image needs it as a build arg** (see `ARG VITE_API_BASE_URL` in `frontend/Dockerfile`) — a runtime env var never reaches the bundle.
+
+## Troubleshooting
+
+### Changed `package.json` but the new dependency isn't there
+
+`node_modules` lives in a named volume. The volume is populated from the image on first creation and then persists, so a stale volume keeps shadowing the rebuilt image.
+
+```bash
+docker compose down -v && docker compose up --build
+```
+
+### Changed `OCR_LANG` and the container won't start
+
+That's intentional. A startup check verifies the language packs and crashes the container **at boot** rather than on a user's first upload:
+
+```
+RuntimeError: Tesseract 5.5.0 is missing language pack(s): ['klingon'].
+Installed: ['eng', 'jpn', 'jpn_vert', 'osd']
+```
+
+Add the pack to `apt-get install` in `backend/Dockerfile`.
