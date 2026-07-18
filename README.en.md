@@ -73,7 +73,3 @@ When I started, **the app did not work.**
 - No PDF support — images only
 - Results aren't persisted; leaving the page loses them
 - No authentication. This is a local development setup
-
-## License
-
-MIT
